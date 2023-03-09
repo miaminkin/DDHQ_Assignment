@@ -1,5 +1,5 @@
 ---
-title: "DDHQ Election Fellow Data Report"
+title: "DDHQ Election Data Fellow Report"
 author: "Amelia Minkin"
 format: html
 page-layout: full
@@ -78,7 +78,7 @@ result_test<-testing(x=result_split)
 
 ## Exploratory Data Analysis/Visualizations
 
-To gain a more robust understanding of the data provided, in addition to exploring the data manually by doing some auxiliary regressions, I also explored the variance of the data to help inform the type of model I would create, the boxplot indicates high variance of the training data.
+To gain a more robust understanding of the data provided, in addition to exploring the data manually by doing some auxiliary regressions, I also explored the variance of the data to help inform the type of model I would create, the boxplot indicates high variance of the dependent variable, margin victory, in training data.
 
 **VARIANCE OF VICTORY MARGIN OVER TIME**
 
@@ -87,7 +87,7 @@ boxplot(R.D.Victory.Margin*100~Year,
         data=result_test)
 ```
 
-Additionally, I created a visualization of the average vote margin between Democratic and Republican candidates in each state. I aggregated the house districts and found the average margin in each state throughout the time frame of 2006-2016.
+Additionally, I created a visualization of the average house race vote margin between candidates in each state. I aggregated the results and found the average house race vote margin in each state throughout the time frame of 2006-2016.
 
 The visualization can be seen here in both a stagnant and interactive form:
 
