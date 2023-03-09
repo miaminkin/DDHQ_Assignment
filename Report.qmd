@@ -29,6 +29,7 @@ library(tidyverse)
 library(plotly)
 library(usmap)
 library(ggplot2)
+library(kableExtra)
 
 #Model building
 library(tidymodels)
@@ -220,9 +221,11 @@ Through evaluating the metrics of the model, I found the RMSE to be 9.80, indica
 
 Following these evaluations, I looked at the actual 2018 results and found that the model was okay, not great, it was not completely accurate in predicting the margins of victory and the results.
 
-This was expected however for a multitude of reasons. Predicting the voting pattern of individuals within a house district is incredibly challenging. The voting behavior of individuals depends on various factors such as the candidate running and candidate/voter value alignment. Another major consideration that can be challenging to capture is the impact of redistricting. Redistricting was conducted in 2010 and thus impacted the racial and political makeup of house districts across the country. The change in racial and political composition of districts thus impacts the voting behavior of the district and as such, the margin of victory between the winning and losing candidates.
+This was expected for a multitude of reasons. Predicting the voting pattern of individuals within a house district is incredibly challenging. The voting behavior of individuals depends heavily on various factors outside of what was included in the model. Such considerations may include the candidate running and candidate/voter value alignment. Another major consideration that can be challenging to capture is the impact of redistricting. Redistricting was conducted in 2010 and thus impacted the racial and political makeup of house districts across the country. The change in racial and political composition of districts thus impacted the voting behavior of the district as the whole and as such, also impacted the margin of victory between candidates.
 
-Some ways to account for these important and impactful considerations could be (1) feature engineering to account for the the challenge of capturing voting patterns and (2) adding more predictor variables to make the model more robust (I will note, however, that it can be challenging to gather house district specific demographic data).
+Some ways to account for these important and impactful considerations to improve the model fit and ability to accurately predict victory margins could be through (1) feature engineering to account for the the challenge of capturing voting patterns and (2) adding more predictor variables to make the model more robust (I will note, however, that it can be challenging to gather house district specific demographic data).
+
+**METRICS**
 
 ```{r, message=FALSE,error=FALSE}
 #Metrics
@@ -231,13 +234,20 @@ implementation_predictions %>%
   metrics(R.D.Victory.Margin, .pred)
 ```
 
+**PREDICTIONS (SEAT COUNT/MARGINS)**
+
 ```{r, message=FALSE,error=FALSE}
 #Filtering to see 2018 results
-pred_2018<-filter(implementation_predictions,Year=="2018")
+pred_2018<-filter(implementation_predictions,Year=="2018")%>%select(c("Race.ID", ".pred"))
 
 #Seeing breakdown of results
 pred_2018%>%count(grepl("-",.pred))
 
+#Seeing 2018 Predictions
+pred_2018%>%
+  kbl(caption="2018 Predicted Victory Margins")%>%
+  kable_minimal("hover",full_width=F)%>%
+  scroll_box(width = "300px", height = "200px")
 ```
 
 ## Appending the original data set
