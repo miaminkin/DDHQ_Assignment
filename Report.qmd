@@ -158,7 +158,7 @@ bake(margin_recipe,new_data=result_train)
 
 **I decided to utilize a decision tree model using bootstrap aggregation.**
 
--   In performing exploratory data analysis, I noticed that the training data consists of high variance throughout the years. Given the context of the data representing all of the Congressional house districts across the country that have vastly different racial, political, and geographic demographics, this makes sense. Additionally, there are several occurrances of seats being unopposed. To account for the data's **high variance** and the **unopposed race outliers**, and to reduce overfitting of the data, I utilized bootstrap aggregation for resampling and decision trees.
+-   In performing exploratory data analysis, I noticed that in the training data, the victory margin has consistently high variance throughout the years. Given the context of the data representing all of the Congressional house districts across the country that have vastly different racial, political, and geographic demographics, this makes sense. Additionally, there are several occurrances of seats being unopposed. To account for the data's **high variance** and the **unopposed race outliers**, and to reduce overfitting of the data, I utilized bootstrap aggregation for resampling and decision trees.
 
 **CREATING MODEL**
 
