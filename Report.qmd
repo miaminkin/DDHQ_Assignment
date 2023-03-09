@@ -91,7 +91,7 @@ Additionally, I created a visualization of the average vote margin between Democ
 
 The visualization can be seen here in both a stagnant and interactive form:
 
-**FINDING AVERAGE VICTORY MARGIN PER STATE OVER TIME (2006-2016)**
+**FINDING AVERAGE HOUSE VICTORY MARGIN PER STATE OVER TIME (2006-2016)**
 
 ```{r, message=FALSE,error=FALSE,output=FALSE}
 averages<-result_train%>%
@@ -103,18 +103,18 @@ averages<-result_train%>%
 
 ```{r, message=FALSE,error=FALSE,output=FALSE}
 margin_plot<-
-plot_usmap(regions="state",
-           data=averages,
-           values="Average_Margin",
-           color="black",
-           size=0.001)+
-scale_fill_gradientn(colors=c("blue","white","red"),
-                   breaks=c(-70,0,40),
-                   labels=c("Min",0,"Max"))+
-labs(title="Average Vote Margin By State from 2006-2016")+
+  plot_usmap(regions="state",
+             data=averages,
+             values="Average_Margin",
+             color="black",
+             size=0.001)+
+  scale_fill_gradientn(colors=c("blue","blue","white", "red"))+
+  labs(title="Average House District Victory Margin By State from 2006-2016")+
   theme(legend.position = "right",
         panel.background=element_rect(colour = "black", fill = "white"), 
         plot.title = element_text(face="bold"))
+
+margin_plot
 ```
 
 ```{r, message=FALSE,error=FALSE}

@@ -17,6 +17,8 @@ library(vip)
 library(rpart)
 library(baguette)
 library(plotly)
+library(kableExtra)
+
 
 ##LOADING AND SPLITTING DATA##
   
@@ -55,9 +57,7 @@ margin_plot<-
              values="Average_Margin",
              color="black",
              size=0.001)+
-  scale_fill_gradientn(colors=c("blue","white","red"),
-                       breaks=c(-70,0,40),
-                       labels=c("Min",0,"Max"))+
+  scale_fill_gradientn(colors=c("blue","blue","white", "red"))+
   labs(title="Average Vote Margin By State from 2006-2016")+
   theme(legend.position = "right",
         panel.background=element_rect(colour = "black", fill = "white"), 
@@ -127,10 +127,16 @@ implementation_predictions %>%
   metrics(R.D.Victory.Margin, .pred)
 
 #Filtering to see 2018 results
-pred_2018<-filter(implementation_predictions,Year=="2018")
+pred_2018<-filter(implementation_predictions,Year=="2018")%>%select(c("Race.ID", ".pred"))
 
 #Seeing breakdown of results
 pred_2018%>%count(grepl("-",.pred))
+
+#Seeing 2018 Predictions
+pred_2018%>%
+  kbl(caption="2018 Predicted Victory Margins")%>%
+  kable_minimal("hover",full_width=F)%>%
+  scroll_box(width = "300px", height = "200px")
 
 ##APPENDING ORIGINAL DATA SET##
 
@@ -142,9 +148,3 @@ results_final<-election_results%>%
                   R.D.Victory.Margin))
 #Downloading as csv
 write.csv(results_final,"results_final.csv",row.names=FALSE)
-
-
-
-
-
-
