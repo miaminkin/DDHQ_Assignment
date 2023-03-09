@@ -1,0 +1,261 @@
+---
+title: "DDHQ Election Fellow Data Report"
+author: "Amelia Minkin"
+format: html
+page-layout: full
+editor: visual
+editor_options: 
+  chunk_output_type: console
+execute:
+  warning: false
+  message: false
+  output: true
+self-contained: true
+theme: spacelab
+code-fold: true
+---
+
+## Overview
+
+The following report outlines the methodology utilized to obtain predictions for the margin of victory between Republican and Democratic candidates in all 2018 house races.
+
+## Packages used
+
+```{r}
+#General use
+library(tidyverse)
+
+#Visualizations
+library(plotly)
+library(usmap)
+library(ggplot2)
+
+#Model building
+library(tidymodels)
+library(rpart)
+library(yardstick)
+library(rpart)
+library(baguette)
+```
+
+## Loading and Splitting the Data
+
+Once I loaded the data into R, I split the data set into training and testing sets utilizing a split of 75% and 25%. I chose this proportion due to the decent size of the data set.
+
+Additionally, I performed initial pre-processing steps, the further pre-processing steps are highlighted in its respective section. I initially did the following:
+
+-   Transformed the victory margin to a numeric form
+
+-   Excluded the 2018 observations from the training data since I will be predicting the victory margins, hence, there are no victory margin observations in 2018. I did not exclude these observations from the testing data since the model will be evaluated on the testing data.
+
+-   Divided the victory margin by 100 since it is in percentage form and all of the predictor variables are in decimal form
+
+**LOADING IN DATA**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+options(scipen = 100, digits = 4)
+election_results<-read.csv("DDHQ_Data_Exercise-1.csv")
+election_results$R.D.Victory.Margin<-as.numeric(election_results$R.D.Victory.Margin)
+results<-subset(election_results,Year!="2018")
+election_results$R.D.Victory.Margin<-election_results$R.D.Victory.Margin/100
+```
+
+**SPLITTING DATA**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Splitting data
+set.seed(20201020)
+result_split<-initial_split(data=election_results,prop=0.75)
+
+#Training data
+result_train<-training(x=result_split)
+result_train<-subset(result_train,Year!="2018")
+
+#Testing data
+result_test<-testing(x=result_split)
+```
+
+## Exploratory Data Analysis/Visualizations
+
+To gain a more robust understanding of the data provided, in addition to exploring the data manually by doing some auxiliary regressions, I also explored the variance of the data to help inform the type of model I would create, the boxplot indicates high variance of the training data.
+
+**VARIANCE OF VICTORY MARGIN OVER TIME**
+
+```{r}
+boxplot(R.D.Victory.Margin*100~Year,
+        data=result_test)
+```
+
+Additionally, I created a visualization of the average vote margin between Democratic and Republican candidates in each state. I aggregated the house districts and found the average margin in each state throughout the time frame of 2006-2016.
+
+The visualization can be seen here in both a stagnant and interactive form:
+
+**FINDING AVERAGE VICTORY MARGIN PER STATE OVER TIME (2006-2016)**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+averages<-result_train%>%
+  group_by(state=State)%>%
+  summarize(Average_Margin=mean(R.D.Victory.Margin*100))
+```
+
+**STAGNANT VISUALIZATION**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+margin_plot<-
+plot_usmap(regions="state",
+           data=averages,
+           values="Average_Margin",
+           color="black",
+           size=0.001)+
+scale_fill_gradientn(colors=c("blue","white","red"),
+                   breaks=c(-70,0,40),
+                   labels=c("Min",0,"Max"))+
+labs(title="Average Vote Margin By State from 2006-2016")+
+  theme(legend.position = "right",
+        panel.background=element_rect(colour = "black", fill = "white"), 
+        plot.title = element_text(face="bold"))
+```
+
+```{r, message=FALSE,error=FALSE}
+margin_plot
+```
+
+**INTERACTIVE VISUALIZATION**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+interactive_plot<-ggplotly(margin_plot)
+```
+
+```{r, message=FALSE,error=FALSE}
+interactive_plot
+```
+
+## Data Pre-Processing
+
+To ensure the data could be used in a predictive model, I performed further data pre-processing. In addition to the initial pre-processing noted earlier (transforming the victory margin variable to be numeric and in decimal form and filtering the 2018 observations from the training data) when loading and splitting the data, I also created a recipe with the pre-processing steps to do the following:
+
+-   Remove all string predictors: this removed the variables of "Race.ID", "Chamber," "State," "Incumbent.Running.," and "Geography" from set since the non-numeric variables will not be relevant in obtaining predicted values.
+
+-   Remove "Congressional District" and "Year" variables: while these are numeric variables, they are not relevant predictors of victory margin.
+
+To apply these steps to the data, I prepped the recipe and then applied it to the training data via baking it.
+
+**DATA PRE-PROCESSING**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Creating recipe for pre-processing
+margin_recipe<-recipe(R.D.Victory.Margin~.,data=result_train)%>%
+  step_rm(all_string_predictors())%>%
+  step_rm("Congressional.District")%>%
+  step_rm("Year")%>%
+  prep()
+
+#Baking the recipe
+bake(margin_recipe,new_data=result_train)
+```
+
+## **Building and implementing the model**
+
+**I decided to utilize a decision tree model using bootstrap aggregation.**
+
+-   In performing exploratory data analysis, I noticed that the training data consists of high variance throughout the years. Given the context of the data representing all of the Congressional house districts across the country that have vastly different racial, political, and geographic demographics, this makes sense. Additionally, there are several occurrances of seats being unopposed. To account for the data's **high variance** and the **unopposed race outliers**, and to reduce overfitting of the data, I utilized bootstrap aggregation for resampling and decision trees.
+
+**CREATING MODEL**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Model
+bag_mod<-
+  bag_tree()%>%
+  set_engine("rpart")%>%
+  set_mode("regression")
+
+#Workflow
+bag_wf<-
+  workflow()%>%
+  add_model(bag_mod)%>%
+  add_recipe(margin_recipe)
+```
+
+**ESTIMATING MODEL**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Fitting model on training data
+bag_fit<-bag_wf%>%
+  fit(result_train)
+
+```
+
+**EVALUATING MODEL**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Evaluating model on testing data
+margin_predicted<-bind_cols(result_test,
+                            predict(object=bag_fit,
+                                    new_data=result_test))
+
+summary(result_test$R.D.Victory.Margin)
+```
+
+**IMPLEMENTING MODEL**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Implementing model for prediction
+implementation_predictions<-bind_cols(election_results,
+                                      predict(object=bag_fit,
+                                              new_data=election_results))
+
+#Putting victory margin back into percent 
+implementation_predictions$R.D.Victory.Margin<-implementation_predictions$R.D.Victory.Margin*100
+
+implementation_predictions$.pred<-implementation_predictions$.pred*100
+
+#Filtering implemented data to see results
+implementation_predictions<-implementation_predictions%>%select(c("Race.ID", "Year","R.D.Victory.Margin",".pred"))
+
+```
+
+## Model Evaluation and Interpretation
+
+Through evaluating the metrics of the model, I found the RMSE to be 9.80, indicating that the predicted values on average, deviated 9.80% from the true victory margin in the races from 2006-2016. Additionally, I analyzed the predictions from 2018 and the model predicted a 243D/192R split of the house.
+
+Following these evaluations, I looked at the actual 2018 results and found that the model was okay, not great, it was not completely accurate in predicting the margins of victory and the results.
+
+This was expected however for a multitude of reasons. Predicting the voting pattern of individuals within a house district is incredibly challenging. The voting behavior of individuals depends on various factors such as the candidate running and candidate/voter value alignment. Another major consideration that can be challenging to capture is the impact of redistricting. Redistricting was conducted in 2010 and thus impacted the racial and political makeup of house districts across the country. The change in racial and political composition of districts thus impacts the voting behavior of the district and as such, the margin of victory between the winning and losing candidates.
+
+Some ways to account for these important and impactful considerations could be (1) feature engineering to account for the the challenge of capturing voting patterns and (2) adding more predictor variables to make the model more robust (I will note, however, that it can be challenging to gather house district specific demographic data).
+
+```{r, message=FALSE,error=FALSE}
+#Metrics
+implementation_predictions %>%
+  filter(Year!="2018")%>%
+  metrics(R.D.Victory.Margin, .pred)
+```
+
+```{r, message=FALSE,error=FALSE}
+#Filtering to see 2018 results
+pred_2018<-filter(implementation_predictions,Year=="2018")
+
+#Seeing breakdown of results
+pred_2018%>%count(grepl("-",.pred))
+
+```
+
+## Appending the original data set
+
+**APPENDING WITH PREDICTIONS**
+
+```{r, message=FALSE,error=FALSE,output=FALSE}
+#Appending original data set
+results_final<-election_results%>%
+  mutate(R.D.Victory.Margin=
+        ifelse(is.na(R.D.Victory.Margin),
+                implementation_predictions$.pred,
+                R.D.Victory.Margin))
+```
+
+**DOWNLOADING CSV FILE**
+
+```{r, message=FALSE,error=FALSE}
+#Downloading as csv
+write.csv(results_final,"results_final.csv",row.names=FALSE)
+```
